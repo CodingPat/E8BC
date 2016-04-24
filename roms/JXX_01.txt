@@ -16,21 +16,22 @@
 <0017> 3E 00      ; MOV A,0
 <0019> CA <Z>    ; JZ <Z>
 NZ:
-<0021> 06 08 	  ; MOV B,08
+<0021> 06 08 	  ; MOVI B,08
 <0023> B0	  ; ORA B
 <0024> E1 <LT>	  ; JLT <LT>
-<0027> 06 01	  ; MOV B,01
+<0027> 06 01	  ; MOVI B,01
 <0029> BO	  ; ORA B
 <0030> C3 <CONT>  ; JMP <CONT>
 LT:
-<0033> 06 02	  ; MOV B,02
+<0033> 06 02	  ; MOVI B,02
 <0035> B0	  ; ORA B
 <0036> C3 <CONT>  ; JMP CONT
 Z:
-<0039> 06 04	  ; MOV B,04
+<0039> 06 04	  ; MOVI B,04
 <0041> B0	  ; ORA B
 CONT:
 <0042> D3 01	  ; OUT 01
 <0046> C3 00 00   ; JMP 00 00
 
 
+	
