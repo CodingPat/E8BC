@@ -5,33 +5,33 @@
 // TIME TO THINK ABOUT WRITING AN ASSEMBLER
 // MEANWHILE, HANDWRITING MACHINE LANGUAGE ...
 
+// IN00-IN01
+// OUT00 bit2=Zero bit1=GreatherThan bit0=LowerThan
+
 <0000> 3E 00      ; MOVI A,0 
 <0002> 10 00 00   ; MOV 0000,A
 <0005> 10 01 00   ; MOV 0001,A
 <0008> D7 01      ; IN 01
-<0010> 47         ; MOV B,A
-<0011> D7 00      ; IN 00
-<0013> 90         ; SUB B
-<0014> 10 01 00   ; MOV 0001,A
-<0017> 3E 00      ; MOV A,0
-<0019> CA <Z>    ; JZ <Z>
-NZ:
-<0021> 06 08 	  ; MOVI B,08
-<0023> B0	  ; ORA B
-<0024> E1 <LT>	  ; JLT <LT>
-<0027> 06 01	  ; MOVI B,01
-<0029> BO	  ; ORA B
-<0030> C3 <CONT>  ; JMP <CONT>
-LT:
-<0033> 06 02	  ; MOVI B,02
-<0035> B0	  ; ORA B
-<0036> C3 <CONT>  ; JMP CONT
+<000A> 47         ; MOV B,A
+<000B> D7 00      ; IN 00
+<000D> 90         ; SUB B
+<000E> 10 00 00   ; MOV 0000,A
+<0011> 3E 00      ; MOVI A,0
+<0013> CA <Z>     ; JZ <Z>
+<0016> E1 <LT>	  ; JLT <LT>
+<0019> E8 <GT>	  ; JGT <GT>
+
 Z:
-<0039> 06 04	  ; MOVI B,04
-<0041> B0	  ; ORA B
+<001C> 3E 04 	  ; MOVI A,04
+<001E> C3 <CONT>  ; JMP <CONT>
+LT:
+<0021> 3E 01	  ; MOVI A,01
+<0023> C3 <CONT>  ; JMP <CONT>
+GT:
+<0026> 3E 02	  ; MOVI A,02
 CONT:
-<0042> D3 01	  ; OUT 01
-<0046> C3 00 00   ; JMP 00 00
+<0028> D3 00	  ; OUT 00
+<002A> C3 00 00   ; JMP 00 00
 
 
 	
