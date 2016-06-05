@@ -1,0 +1,13 @@
+***** PGM PUSHA_01 ******
+ TEST PUSH A
+**************************
+
+
+<0000> 1C FF   ; MOVI SPH,FF 
+<0002> 1F 00   ; MOV SPL,00
+<0004> 3E 0A   ; MOV A,0A
+<0006> 57      ; PUSH A
+<0007> 76      ; HLT
+
+
+	
