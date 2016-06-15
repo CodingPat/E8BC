@@ -3,7 +3,7 @@
 
 #stack at 00FF
 MOVI SPL,FF
-MOVI SPH,00
+MOVI SPH,01
 
 #push regs
 
