@@ -1,0 +1,99 @@
+import sys
+import re
+
+class Parser():
+  """parse a file and return elements for each line"""
+  
+  def __init__(self):
+    pass
+
+  def parse_line(self,line):
+    """read line """
+    instruction_type=self.instruction_type(line)
+    if instruction_type=="":
+      instruction_type="ERROR UNKNOWN TYPE"
+    print(instruction_type,end=' :')
+    print(line)    
+    
+    if instruction_type=="comment":    
+      pass
+    elif instruction_type=="label":
+      pass
+    elif instruction_type=="opcode":
+      pass
+    else:
+      pass
+    
+  def instruction_type(self,line):
+    """label or instruction ?"""
+    opcodes=['MOV','MOVI','ADD','ADC','OUT','IN','HLT','CLC','JMP','JZ','JLT','JGT','JNZ']
+    #delete comments
+    line=line[0].split(#)
+    #delete white characts at the beginning or the end
+    line=line.strip()    
+    
+             
+    matchobj=re.match(r'^[a-zA-Z]\w+:$',line)
+    if matchobj:
+      return "label"
+      
+    matchobj=re.match(r'^\s*$',line)
+    if matchobj or line="":
+      return "blank"
+    
+    #uppercase
+    line=upper(line)
+        
+    #no match
+    return ""
+
+  def symbol(self):
+    """return label or variable"""
+    pass
+    
+  def destination(self):
+    """return destination"""
+    pass
+
+  def opcode(self):
+    """return opcode"""
+    pass    
+
+
+
+class SymbolTable():
+  pass
+  
+
+
+
+class Encoder():
+  pass
+    
+  
+class Controller():
+  """controls the working of the parser"""
+  def __init__(self,file_in,file_out):
+    self.file_in=open(file_in,'r')
+    self.file_out=open(file_out,'w')
+    self.parser=Parser()
+    
+  def start(self):
+    while True:
+      line=self.file_in.readline()
+      
+      if line:
+        self.parser.parse_line(line)
+      else:
+        break
+        
+     
+  
+if __name__=='__main__':
+  file_in=sys.argv[1]
+  file_out=sys.argv[2]
+  my_controller=Controller(file_in,file_out)
+  my_controller.start()
+  
+  
+  
