@@ -9,54 +9,86 @@ class Parser():
 
   def parse_line(self,line):
     """read line """
-    instruction_type=self.instruction_type(line)
-    if instruction_type=="":
-      instruction_type="ERROR UNKNOWN TYPE"
-    print(instruction_type,end=' :')
-    print(line)    
-    
-    if instruction_type=="comment":    
-      pass
-    elif instruction_type=="label":
-      pass
-    elif instruction_type=="opcode":
-      pass
+    line=line.strip()
+    if line:
+      instruction_type=self.instruction_type(line)
     else:
-      pass
+      return({'type':"blank",'line':line})
+        
+    if instruction_type=="comment":    
+      return({'type':"comment",'line':line})
+    elif instruction_type=="label":
+      label=symbol()
+      return({'type':"label",'label':label})
+    elif instruction_type=="blank":
+      return({'type':"blank",'line':line})
+    elif instruction_type=="variable":
+      return({'type':'variable'})
+    else:
+      #must be opcode
+      opcode=""
+      source=""
+      destination=""
+      result=self.split_opcode(line)
+      if result:
+        result.update({'type':'opcode'})
+        return(result)
+      else:
+        return({'type':None})
+      
+  def split_opcode(self,line):
+    """get opcode, source, destination"""
+    source=""
+    destination=""
+    line=line.upper()
+    print(line)
+    result=line.split(' ')
+    
+    if len(result)==1:
+      opcode=result[0]
+    if len(result)==2:
+      opcode,other=result
+      other=other.split(',')
+      nr_operands=len(other)
+      if nr_operands==1:
+        source=other[0]
+      elif nr_operands==2:
+        source=other[0]
+        destination=other[1]
+        
+    return({'opcode':opcode,'source':source,'destination':destination})
     
   def instruction_type(self,line):
-    """label or instruction ?"""
-    opcodes=['MOV','MOVI','ADD','ADC','OUT','IN','HLT','CLC','JMP','JZ','JLT','JGT','JNZ']
-    opcodes.append(['INC'])
+    """blank, label or instruction ?"""
     #delete comments
-    line=line[0].split(#)
-    #delete white characts at the beginning or the end
-    line=line.strip()    
+    line=line.split('#')
     
-             
+    line=line[0]
+    
     matchobj=re.match(r'^[a-zA-Z]\w+:$',line)
     if matchobj:
       return "label"
       
     matchobj=re.match(r'^\s*$',line)
-    if matchobj or line="":
+    if matchobj or line=="":
       return "blank"
     
-    #uppercase
-    line=upper(line)
-        
-    #no match
-    return ""
+    return None
+    
 
   def symbol(self):
     """return label or variable"""
     pass
     
-  def destination(self):
+  def get_destination(self):
     """return destination"""
     pass
+    
+  def get_source(self):
+    """return source"""
+    pass
 
-  def opcode(self):
+  def get_opcode(self):
     """return opcode"""
     pass    
 
@@ -84,7 +116,8 @@ class Controller():
       line=self.file_in.readline()
       
       if line:
-        self.parser.parse_line(line)
+        result=self.parser.parse_line(line)
+        print(result)
       else:
         break
         
