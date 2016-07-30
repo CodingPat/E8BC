@@ -4,44 +4,54 @@ import re
 class Parser():
   """parse a file and return elements for each line"""
   
-  def __init__(self):
-    pass
-
+  def __init__(self,opcodes):
+    self.parsed_line={}
+    self.opcodes=opcodes
+    
   def parse_line(self,line):
     """read line """
     line=line.strip()
-    if line:
-      instruction_type=self.instruction_type(line)
-    else:
-      return({'type':"blank",'line':line})
-        
+    instruction_type=self.instruction_type(line)
+          
     if instruction_type=="comment":    
-      return({'type':"comment",'line':line})
+      self.parsed_line={'type':"comment",'line':line}
+    
     elif instruction_type=="label":
-      label=symbol()
-      return({'type':"label",'label':label})
+      label=self.symbol()
+      self.parsed_line={'type':"label",'label':label}
+      
     elif instruction_type=="blank":
-      return({'type':"blank",'line':line})
+      self.parsed_line={'type':"blank",'line':line}
+      
     elif instruction_type=="variable":
-      return({'type':'variable'})
-    else:
-      #must be opcode
+      variable=self.symbol()
+      self.parsed_line={'type':'variable','variable':variable}
+    
+    elif instruction_type=="opcode":
       opcode=""
       source=""
       destination=""
       result=self.split_opcode(line)
       if result:
-        result.update({'type':'opcode'})
-        return(result)
+        self.parsed_line=result        
+        self.parsed_line.update({'type':'opcode'})
+        
       else:
-        return({'type':None})
+        # bad format for instruction
+        self.parsed_line={'type':None}
+
+    
+    else:
+      self.parsed_line={'type':None}
+     
       
   def split_opcode(self,line):
     """get opcode, source, destination"""
-    source=""
-    destination=""
+    opcode=""    
+    operand1=""
+    operand2=""
     line=line.upper()
-    print(line)
+    
     result=line.split(' ')
     
     if len(result)==1:
@@ -51,12 +61,12 @@ class Parser():
       other=other.split(',')
       nr_operands=len(other)
       if nr_operands==1:
-        source=other[0]
+        operand1=other[0]
       elif nr_operands==2:
-        source=other[0]
-        destination=other[1]
+        operand1=other[0]
+        operand2=other[1]
         
-    return({'opcode':opcode,'source':source,'destination':destination})
+    return({'opcode':opcode,'operand1':operand1,'operand2':operand2})
     
   def instruction_type(self,line):
     """blank, label or instruction ?"""
@@ -70,9 +80,18 @@ class Parser():
       return "label"
       
     matchobj=re.match(r'^\s*$',line)
-    if matchobj or line=="":
+    if matchobj:
       return "blank"
     
+    
+    # search for opcode
+    for opcode in self.opcodes:
+      myreg=r'^'+opcode+'{1}'
+      matchobj=re.match(myreg,line)
+      if matchobj:
+        return "opcode"
+    
+    # type unknown 
     return None
     
 
@@ -81,16 +100,19 @@ class Parser():
     pass
     
   def get_destination(self):
-    """return destination"""
-    pass
+    """return destination - call only if instruction type=opcode"""
+    return(self.parsed_line['destination'])
+    
     
   def get_source(self):
-    """return source"""
-    pass
+    """return source - call only if instruction type=opcode"""
+    return(self.parsed_line['source'])
 
   def get_opcode(self):
-    """return opcode"""
-    pass    
+    """return opcode - call only if instruction type=opcode"""
+    return(self.parsed_line['opcode'])
+    
+    
 
 
 
@@ -106,27 +128,33 @@ class Encoder():
   
 class Controller():
   """controls the working of the parser"""
-  def __init__(self,file_in,file_out):
+  def __init__(self,file_in,file_out,opcodes):
     self.file_in=open(file_in,'r')
     self.file_out=open(file_out,'w')
-    self.parser=Parser()
+    self.parser=Parser(opcodes)
     
   def start(self):
     while True:
       line=self.file_in.readline()
       
       if line:
-        result=self.parser.parse_line(line)
+        self.parser.parse_line(line)
+        result=self.parser.parsed_line
         print(result)
+    
       else:
         break
         
      
   
 if __name__=='__main__':
+  # to do : replace set opcodes, by getting hash codes from table machine_code, 
+  opcodes=set(['MOV','MOVI','ADD','ADC','OUT','IN','HLT','CLC','JMP','JZ','JLT','JGT','JNZ','INC','SUB','SBC','ORA','ANA','PUSH','POP','CALL','RET'])
+  
+  
   file_in=sys.argv[1]
   file_out=sys.argv[2]
-  my_controller=Controller(file_in,file_out)
+  my_controller=Controller(file_in,file_out,opcodes)
   my_controller.start()
   
   
