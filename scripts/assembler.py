@@ -123,7 +123,23 @@ class SymbolTable():
 
 
 class Encoder():
-  pass
+  def __init__(self):
+    pass
+   
+  def encode(self,code_dict):
+    
+    instruction=code_dict['opcode']
+    if code_dict['operand1']:
+      instruction=instruction+' '+code_dict['operand1']
+    if code_dict['operand2']:
+      instruction=instruction+','+code_dict['operand2']
+    instruction=instruction.strip()
+    print("Encoding : ",instruction)
+    
+      
+  
+  
+    
     
   
 class Controller():
@@ -132,6 +148,7 @@ class Controller():
     self.file_in=open(file_in,'r')
     self.file_out=open(file_out,'w')
     self.parser=Parser(opcodes)
+    self.encoder=Encoder()
     
   def start(self):
     while True:
@@ -141,6 +158,8 @@ class Controller():
         self.parser.parse_line(line)
         result=self.parser.parsed_line
         print(result)
+        if result['type']=="opcode":        
+          self.encoder.encode(result)
     
       else:
         break
@@ -148,7 +167,7 @@ class Controller():
      
   
 if __name__=='__main__':
-  # to do : replace set opcodes, by getting hash codes from table machine_code, 
+  #to do : replace opcodes set by sqlite3 file with instructions/opcode  
   opcodes=set(['MOV','MOVI','ADD','ADC','OUT','IN','HLT','CLC','JMP','JZ','JLT','JGT','JNZ','INC','SUB','SBC','ORA','ANA','PUSH','POP','CALL','RET'])
   
   
