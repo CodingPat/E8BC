@@ -1,5 +1,6 @@
 import sys
 import re
+import csv
 
 class Parser():
   """parse a file and return elements for each line"""
@@ -123,32 +124,60 @@ class SymbolTable():
 
 
 class Encoder():
-  def __init__(self):
-    pass
-   
-  def encode(self,code_dict):
-    
-    instruction=code_dict['opcode']
+  def __init__(self,mnemonics_file):
+    self.mnemonics_regex=[]
+    self.mnemonics_hex=[]
+    self.instruction=""
+    self.read_file(mnemonics_file)
+    self.translated={'nr_bytes':0}
+  
+  def set_instruction(self,code_dict):
+    self.instruction=code_dict['opcode']
     if code_dict['operand1']:
-      instruction=instruction+' '+code_dict['operand1']
+      self.instruction=self.instruction+' '+code_dict['operand1']
     if code_dict['operand2']:
-      instruction=instruction+','+code_dict['operand2']
-    instruction=instruction.strip()
-    print("Encoding : ",instruction)
+      self.instruction=self.instruction+','+code_dict['operand2']
+    self.instruction=self.instruction.strip()
     
-      
+  def encode(self,code_dict):
+    self.set_instruction(code_dict)
+    result=self.translate(self.instruction)
+    print('hex : ',result)
+    
+     
   
-  
+  def read_file(self,mnemonics_file):
+    with open(mnemonics_file) as csv_file:
+      csv_reader=csv.reader(csv_file,delimiter=';')
+      for row in csv_reader:
+        self.mnemonics_regex.append(row[1])
+        self.mnemonics_hex.append(row[2])
+          
+    
+  def translate(self,mnemonic):
+    #TO DO : some instructions are coded on multiple bytes. Return hex + number of bytes
+    print('translate : ',mnemonic)    
+    index=0
+    opcode_hex=""
+    for reg in self.mnemonics_regex:
+      reg=reg.encode('unicode-escape').decode('utf-8')
+      #print('regex :',reg)
+      matchobj=re.match(reg,mnemonic)
+      if matchobj:
+        opcode_hex=self.mnemonics_hex[index]
+        return({'hex':opcode_hex,'bytes':1})
+      index=index+1
+    return None   
     
     
   
 class Controller():
   """controls the working of the parser"""
-  def __init__(self,file_in,file_out,opcodes):
+  def __init__(self,file_in,file_out,opcodes,mnemonics_file):
     self.file_in=open(file_in,'r')
     self.file_out=open(file_out,'w')
     self.parser=Parser(opcodes)
-    self.encoder=Encoder()
+    self.encoder=Encoder(mnemonics_file)
     
   def start(self):
     while True:
@@ -164,7 +193,7 @@ class Controller():
       else:
         break
         
-     
+       
   
 if __name__=='__main__':
   #to do : replace opcodes set by sqlite3 file with instructions/opcode  
@@ -173,7 +202,8 @@ if __name__=='__main__':
   
   file_in=sys.argv[1]
   file_out=sys.argv[2]
-  my_controller=Controller(file_in,file_out,opcodes)
+  mnemonics_file='mnemonics.csv'
+  my_controller=Controller(file_in,file_out,opcodes,mnemonics_file)
   my_controller.start()
   
   
