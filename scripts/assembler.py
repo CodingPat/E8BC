@@ -160,6 +160,9 @@ class Encoder():
     index=0
     opcode_hex=""
     for reg in self.mnemonics_regex:
+      #r'<expression>' means : raw string = do not interpretate escape character
+      #transforming the value in the csv file in raw string, is a little "black magic"
+      #as far as i understand, encode transforms string in "byte" raw string, decode transforms back in raw string
       reg=reg.encode('unicode-escape').decode('utf-8')
       #print('regex :',reg)
       matchobj=re.match(reg,mnemonic)
