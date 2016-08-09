@@ -32,7 +32,7 @@ class Parser():
   def parse_for_blank(self,line):
     matchobj=re.match(r'^\s*$',line)
     if matchobj or line=="":
-      self.parsed_line={'type':"blank",'line':line}
+      return {'type':"blank"}
     else:
       return None
     
@@ -50,13 +50,13 @@ class Parser():
     index=0
     opcode_hex=""
     for reg in self.mnemonics.regex:
-      #some black magic to decode string csv => raw string (needed for re.match)      
-      #r'<expression>' means : raw string = do not interpretate escape character
-      reg=reg.encode('unicode-escape').decode('utf-8')
-      print('regex :',reg)
+      #transform reg in raw string (to be used as regex) 
+      #print('regex :',reg)
       matchobj=re.match(reg,line)
       if matchobj:
-        return({'type':'opcode','regex':mnemonics.regex[index]})
+        dic_instruction=self.split_opcode(line)
+        dic_instruction.update({'type':'opcode','regex':self.mnemonics.regex[index]})
+        return dic_instruction
       index=index+1
     return None   
     
@@ -93,7 +93,7 @@ class Parser():
     opcode=""    
     operand1=""
     operand2=""
-    line=line.upper()
+    
     
     result=line.split(' ')
     
@@ -120,29 +120,19 @@ class SymbolTable():
 
 
 class Encoder():
-  def __init__(self):
-    self.instruction=""
+  def __init__(self,mnemonics):
+    self.mnemonics=mnemonics    
     self.translated={'nr_bytes':0}
   
-  def set_instruction(self,code_dict):
-    self.instruction=code_dict['opcode']
-    if code_dict['operand1']:
-      self.instruction=self.instruction+' '+code_dict['operand1']
-    if code_dict['operand2']:
-      self.instruction=self.instruction+','+code_dict['operand2']
-    self.instruction=self.instruction.strip()
-    
-  def encode(self,code_dict):
-    self.set_instruction(code_dict)
-    result=self.translate(self.instruction)
-    print('hex : ',result)
-    
+  def encode(self,parse_dict):
+    index=self.mnemonics.regex.index(parse_dict['regex'])
+    if index:
+      print(parse_dict['opcode'],parse_dict['operand1'],parse_dict['operand2'],'\tHex : ',self.mnemonics.hex[index])
+    else:
+      print("ERROR NO HEX FOUND")
+        
      
-  def translate(self,mnemonic):
-    #TO DO : some instructions are coded on multiple bytes. Return hex + number of bytes
-    #print('translate : ',mnemonic)    
-    pass
-    
+     
   
 class Controller():
   """controls the working of the parser"""
@@ -151,7 +141,7 @@ class Controller():
     self.file_out=open(file_out,'w')
     self.mnemonics=Mnemonics(mnemonics_file)
     self.parser=Parser(self.mnemonics)
-    self.encoder=Encoder()
+    self.encoder=Encoder(self.mnemonics)
     
   def start(self):
     while True:
@@ -160,8 +150,9 @@ class Controller():
       if line:
         self.parser.parse_line(line)
         result=self.parser.parsed_line
-        print(result)
-        if result['type']=="opcode":        
+        if result['type']=="unknown":
+          print(result)
+        if result['type']=="opcode":
           self.encoder.encode(result)
     
       else:
@@ -180,3 +171,5 @@ if __name__=='__main__':
   
   
   
+
+
