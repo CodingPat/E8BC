@@ -122,12 +122,48 @@ class SymbolTable():
 class Encoder():
   def __init__(self,mnemonics):
     self.mnemonics=mnemonics    
-    self.translated={'nr_bytes':0}
-  
+    self.translated=[]
+    
+  def operand_to_hex(self,operand):
+    """convert operand to hex"""
+    if re.match(r'^0x[0-9A-F]+$',operand):
+      operand.replace("0x","")
+      return operand
+    elif re.match(r'^[0-9]+$'):
+      operand=hex(operand).split('x')[1]
+      return operand
+    else:
+      return None
+    
+    
+  def extra_bytes(self,parse_dict):
+    extra_bytes=[]
+    if parse_dict['opcode'] in('CALL','IN','JGT','JLT','JMP','JNZ','JZ'):    
+      result=str(operand_to_hex(parse_dict['operand1']))
+      
+        
+    if result:
+      extra_bytes.append(result[2,3])
+      extra_bytes.append(result[0,1])
+
+    return extra_bytes      
+      
   def encode(self,parse_dict):
+    self.translated=[]
     index=self.mnemonics.regex.index(parse_dict['regex'])
     if index:
-      print(parse_dict['opcode'],parse_dict['operand1'],parse_dict['operand2'],'\t\tHex : ',self.mnemonics.hex[index])
+      self.translated.append(self.mnemonics.hex[index])
+
+      #multibytes instructions
+      if parse_dict['opcode'] in('CALL','IN','JGT','JLT','JMP','JNZ','JZ'):
+        result=self.extra_bytes(parse_dict)
+        if result:
+          self.translated.append(result)
+        else:
+          print('ERROR ENCODING MULTIBYTE INSTRUCTION')
+      
+      print(parse_dict['opcode'],parse_dict['operand1'],parse_dict['operand2'],'\tHex : ',self.translated)
+      
     else:
       print("ERROR NO HEX FOUND")
         

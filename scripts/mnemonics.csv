@@ -1,7 +1,7 @@
 ADC B;^(ADC B)$;88
 ADD B;^(ADD B)$;80
 ANA B;^(ANA B)$;A0
-CALL;^(CALL)$;FF
+CALL xxxx;^(CALL 0x[0-9A-F]{4})$;FF
 CLC;^(CLC)$;9
 HLT;^(HLT)$;76
 IN M;^(IN M)$;D7
