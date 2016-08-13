@@ -126,17 +126,15 @@ class Encoder():
     
   def operand_to_hex(self,operand):
     """convert operand to hex"""
-    #print('operand:',operand)
     if re.match(r'^0x[0-9A-F]+$',operand):
-      operand.replace("0x","")
       return operand
     elif re.match(r'^[0-9]+$',operand):
-      print('dec operand:',operand)
       operand=hex(int(operand)).split('x')[1]
       if len(operand)<2:
         operand=operand.zfill(2)
       elif len(operand)<4:
         operand=operand.zfill(4)
+      operand='0x'+operand
       return operand
     else:
       return None
@@ -145,33 +143,57 @@ class Encoder():
   def extra_bytes(self,parse_dict):
     #print('extra_bytes - parse_dict :',parse_dict)
     extra_bytes=[]
+    result=""
+    
     if parse_dict['opcode'] in('CALL','IN','JGT','JLT','JMP','JNZ','JZ'):    
       result=str(self.operand_to_hex(parse_dict['operand1']))
-      if result:
-        extra_bytes.append(result[2:4])
-        extra_bytes.append(result[0:2])
-    
+         
     if parse_dict['opcode'] in('MOVI'):    
       result=str(self.operand_to_hex(parse_dict['operand2']))
-      if result:
-        extra_bytes.append(result)
        
+    if parse_dict['opcode']=='PUSH' and parse_dict['operand1'][0]=='R':    
+      operand=parse_dict['operand1'].split('R')[1] 
+      result=str(self.operand_to_hex(operand))
+      
+    if parse_dict['opcode']=='PUSH' and parse_dict['operand1']=='M':    
+      operand=parse_dict['operand2']
+      result=str(self.operand_to_hex(operand))
+      
+    
+    if result:
+        result=result.split('0x')[1]
+        if len(result)==2:
+          extra_bytes.append(result)
+        elif len(result)==4:
+          extra_bytes.append(result[2:4])
+          extra_bytes.append(result[0:2])
+        else:
+          print('ERROR - OPERAND VALUE NOT VALID')
+  
     
     return extra_bytes      
       
   def encode(self,parse_dict):
     self.translated=[]
     index=self.mnemonics.regex.index(parse_dict['regex'])
+    multibyte=False
     if index:
       self.translated.append(self.mnemonics.hex[index])
 
       #multibytes instructions
       if parse_dict['opcode'] in('CALL','IN','JGT','JLT','JMP','JNZ','JZ','MOVI'):
+        multibyte=True        
+      elif parse_dict['opcode']=="PUSH" and (parse_dict['operand1'][0]=='R' or parse_dict['operand1']=='M'):
+        multibyte=True
+      
+      if multibyte :
         result=self.extra_bytes(parse_dict)
         if result:
           self.translated=self.translated+result
         else:
           print('ERROR ENCODING MULTIBYTE INSTRUCTION')
+
+        
       
       print(parse_dict['opcode'],parse_dict['operand1'],parse_dict['operand2'],'\tHex : ',self.translated)
       
@@ -179,7 +201,8 @@ class Encoder():
       print("ERROR NO HEX FOUND")
         
      
-     
+class Writer():
+  pass     
   
 class Controller():
   """controls the working of the parser"""
@@ -189,7 +212,21 @@ class Controller():
     self.mnemonics=Mnemonics(mnemonics_file)
     self.parser=Parser(self.mnemonics)
     self.encoder=Encoder(self.mnemonics)
+    self.bytes_written=0
     
+  def write_to_file(self,hex_array):
+    # TO DO : special class Writer 
+    #modulo % + len(hex_array) + self.bytes_written<=8
+    
+    nr_bytes_to_write=len(hex_array)
+    while(nr_bytes_to_write):    
+      nr_bytes_to_write=nr_bytes_to_write-1    
+      byte=hex_array.pop()
+      file_out.write(byte+" ")
+      self.bytes_written=self.bytes_written+1
+      if self.bytes_encoded%4==0:
+        self.file_out.write('\n')
+
   def start(self):
     while True:
       line=self.file_in.readline()
@@ -202,9 +239,13 @@ class Controller():
           print(result)
         if result['type']=="opcode":
           self.encoder.encode(result)
-    
+          self.write_to_file(self.encoder.translated)
+                    
       else:
         break
+      
+    self.file_out.close()
+    self.file_in.close()
         
        
   
