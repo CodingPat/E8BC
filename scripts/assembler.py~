@@ -126,25 +126,34 @@ class Encoder():
     
   def operand_to_hex(self,operand):
     """convert operand to hex"""
+    #print('operand:',operand)
     if re.match(r'^0x[0-9A-F]+$',operand):
       operand.replace("0x","")
       return operand
-    elif re.match(r'^[0-9]+$'):
-      operand=hex(operand).split('x')[1]
+    elif re.match(r'^[0-9]+$',operand):
+      print('dec operand:',operand)
+      operand=hex(int(operand)).split('x')[1]
+      if len(operand)<2:
+        operand=operand.zfill(2)
+      elif len(operand)<4:
+        operand=operand.zfill(4)
       return operand
     else:
       return None
     
     
   def extra_bytes(self,parse_dict):
+    #print('extra_bytes - parse_dict :',parse_dict)
     extra_bytes=[]
     if parse_dict['opcode'] in('CALL','IN','JGT','JLT','JMP','JNZ','JZ'):    
-      result=str(operand_to_hex(parse_dict['operand1']))
+      result=str(self.operand_to_hex(parse_dict['operand1']))
       
-        
+    if parse_dict['opcode'] in('MOVI'):    
+      result=str(self.operand_to_hex(parse_dict['operand2']))
+       
     if result:
-      extra_bytes.append(result[2,3])
-      extra_bytes.append(result[0,1])
+      extra_bytes.append(result[2:4])
+      extra_bytes.append(result[0:2])
 
     return extra_bytes      
       
@@ -155,10 +164,10 @@ class Encoder():
       self.translated.append(self.mnemonics.hex[index])
 
       #multibytes instructions
-      if parse_dict['opcode'] in('CALL','IN','JGT','JLT','JMP','JNZ','JZ'):
+      if parse_dict['opcode'] in('CALL','IN','JGT','JLT','JMP','JNZ','JZ','MOVI'):
         result=self.extra_bytes(parse_dict)
         if result:
-          self.translated.append(result)
+          self.translated=self.translated+result
         else:
           print('ERROR ENCODING MULTIBYTE INSTRUCTION')
       
@@ -186,6 +195,7 @@ class Controller():
       if line:
         self.parser.parse_line(line)
         result=self.parser.parsed_line
+        #print(result)
         if result['type']=="unknown":
           print(result)
         if result['type']=="opcode":
