@@ -2,8 +2,8 @@
 # test push registers + cache registers 0-3 + memory adress
 
 #stack at 00FF
-MOVI SPL,1
-MOVI SPH,1
+MOVI SPL,0xFF
+MOVI SPH,0x1
 
 #push regs
 

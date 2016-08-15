@@ -51,13 +51,13 @@ class Parser():
     index=0
     opcode_hex=""
     for reg in self.mnemonics.regex:
-      #transform reg in raw string (to be used as regex) 
       #print('regex :',reg)
       matchobj=re.match(reg,line)
       if matchobj:
         dic_instruction=self.split_opcode(line)
         dic_instruction.update({'type':'opcode','regex':self.mnemonics.regex[index]})
         return dic_instruction
+        
       index=index+1
     return None   
     
@@ -127,7 +127,7 @@ class Encoder():
     
   def operand_to_hex(self,operand):
     """convert operand to hex"""
-    if re.match(r'^0x[0-9A-F]+$',operand):
+    if re.match(r'^0X[0-9A-F]+$',operand):
       return operand
     elif re.match(r'^[0-9]+$',operand):
       operand=hex(int(operand)).split('x')[1]
@@ -135,36 +135,42 @@ class Encoder():
         operand=operand.zfill(2)
       elif len(operand)<4:
         operand=operand.zfill(4)
-      operand='0x'+operand
+      operand='0X'+operand
       return operand
     else:
       return None
     
     
   def extra_bytes(self,parse_dict):
-    #print('extra_bytes - parse_dict :',parse_dict)
+    print('extra_bytes - parse_dict :',parse_dict)
     extra_bytes=[]
     result=""
     
     if parse_dict['opcode'] in('CALL','IN','JGT','JLT','JMP','JNZ','JZ'):    
       result=str(self.operand_to_hex(parse_dict['operand1']))
       if result:
-        result=result.split('0x')[1]
+        result=result.split('0X')[1]
         extra_bytes.append(result[2:4])
         extra_bytes.append(result[0:2])
+    
+    if parse_dict['opcode'] in('OUT'): 
+      result=str(self.operand_to_hex(parse_dict['operand1']))
+      if result:
+        result=result.split('0X')[1]
+        extra_bytes.append(result)
           
          
     if parse_dict['opcode'] in('MOVI'):    
       result=str(self.operand_to_hex(parse_dict['operand2']))
       if result:
-        result=result.split('0x')[1]
+        result=result.split('0X')[1]
         extra_bytes.append(result)
        
     if parse_dict['opcode']=='PUSH' and parse_dict['operand1'][0]=='R':    
       operand=parse_dict['operand1'].split('R')[1] 
       result=str(self.operand_to_hex(operand))
       if result:
-        result=result.split('0x')[1]
+        result=result.split('0X')[1]
         extra_bytes.append(result)
       
     if parse_dict['opcode']=='PUSH' and parse_dict['operand1']=='M':    
@@ -172,7 +178,7 @@ class Encoder():
           
       result=str(self.operand_to_hex(operand))
       if result:      
-        result=result.split('0x')[1]
+        result=result.split('0X')[1]
         extra_bytes.append(result[2:4])
         extra_bytes.append(result[0:2])
         #use temporary register reg0
@@ -194,6 +200,8 @@ class Encoder():
       if parse_dict['opcode'] in('CALL','IN','JGT','JLT','JMP','JNZ','JZ','MOVI'):
         multibyte=True        
       elif parse_dict['opcode']=="PUSH" and (parse_dict['operand1'][0]=='R' or parse_dict['operand1']=='M'):
+        multibyte=True
+      elif parse_dict['opcode']=="OUT":
         multibyte=True
       
       if multibyte :
@@ -217,11 +225,12 @@ class Writer():
   def write_header(self):
     self.file_rom.write("v2.0 raw\n")
     
-  def write_to_file(self,hex_array):
+  def write_to_file(self,hex_array,line_code):
     
     #write to txt
-    self_rom_address=hex(self.bytes_written)    
-    line=str(hex(self.bytes_written))+" "+"\t".join(hex_array)
+    rom_address=str(hex(self.bytes_written)).replace('0x',"").zfill(4)
+    rom_address="0X"+rom_address    
+    line=str(rom_address).ljust(10)+" ".join(hex_array).ljust(15)+line_code.strip()
     self.file_txt.write(line+'\n')
     
     
@@ -243,10 +252,16 @@ class Controller():
   def __init__(self,file_in,mnemonics_file):
     self.file_in=open(file_in,'r')
     file_name=os.path.basename(file_in)
-    file_name=file_name.split('.asm')[0]
+    file_path=file_in.replace(file_name,"")
     
+    file_name=file_name.split('.asm')[0]
+        
     file_rom=file_name+'.rom'
+    file_rom=os.path.join(file_path,file_rom)    
     file_txt=file_name+'.txt'
+    file_txt=os.path.join(file_path,file_txt)    
+    
+    print(file_rom,file_txt)   
     self.file_rom=open(file_rom,'w')
     self.file_txt=open(file_txt,'w')    
     self.mnemonics=Mnemonics(mnemonics_file)
@@ -260,16 +275,17 @@ class Controller():
       line=self.file_in.readline()
       
       if line:
+        line=line.upper()
         self.parser.parse_line(line)
         result=self.parser.parsed_line
         #print(result)
         if result['type']=="unknown":
-          print(result)
+          print("ERROR :",result)
         if result['type']=="opcode":
           self.encoder.encode(result)
           
-          print(" ".join(self.encoder.translated)+"\t\t"+self.parser.parsed_line['opcode'])
-          self.writer.write_to_file(self.encoder.translated)
+          #print(" ".join(self.encoder.translated)+"\t\t"+self.parser.parsed_line['opcode'])
+          self.writer.write_to_file(self.encoder.translated,line)
                      
       else:
         break
