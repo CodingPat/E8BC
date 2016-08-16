@@ -3,7 +3,30 @@ import re
 import csv
 import os
 
-
+class SymbolTable():
+  def __init__(self):
+    self.symbols={}
+    self.next_free_address=0
+    
+  def addEntry(self,symbol):
+    address=str(hex(self.next_free_address)).upper()
+    address.replace('0X','').zfill(4)
+    address='0X'+address    
+    self.symbols['symbol']=address
+    self.next_free_address=self.next_free_address+1
+  
+  def contains(self,symbol):
+    if self.symbols['symbol']:
+      return True
+    else:
+      return False
+    
+  def getAddress(self,symbol):
+    if self.contains(symbol):
+      return self.symbols['symbol']
+    else:
+      return None
+    
 
 class Mnemonics():
   def __init__(self,mnemonics_file):
@@ -25,9 +48,10 @@ class Mnemonics():
 class Parser():
   """parse a file and return elements for each line"""
   
-  def __init__(self,mnemonics):
+  def __init__(self,mnemonics,symbols):
     self.parsed_line={}
     self.mnemonics=mnemonics
+    self.symbols=symbols
   
   
   def parse_for_blank(self,line):
@@ -38,14 +62,16 @@ class Parser():
       return None
     
   
-  def parse_for_symbol(self,line):
-    #unfinished
-    #test .variable=#<0000> or :<label>
-    """matchobj=re.match(r'^[a-zA-Z]\w+:$',line)
+  def parse_for_label(self,line):
+    matchobj=re.match(r'^\w+:$',line)
+    line.replace(":","")
     if matchobj:
-      return "label"
-    """
-    pass
+      if not self.symbols.gets(line):
+        self.symbols.add_entry(line)
+       
+      return {'type':"label"}
+    
+    
 
   def parse_for_opcode(self,line):
     index=0
@@ -81,7 +107,7 @@ class Parser():
       if result:
         self.parsed_line=result
       else:
-        result=self.parse_for_symbol(line)
+        result=self.parse_for_label(line)
         if result:
           self.parsed_line=result
         else:
@@ -114,12 +140,6 @@ class Parser():
     
         
       
-class SymbolTable():
-  pass
-  
-
-
-
 class Encoder():
   def __init__(self,mnemonics):
     self.mnemonics=mnemonics    
@@ -268,6 +288,9 @@ class Controller():
     self.encoder=Encoder(self.mnemonics)
     self.writer=Writer(self.file_rom,self.file_txt) 
     
+  #TO DO : 2 passes. 
+  #First pass=file.1st (txt) + create symbol table
+  #Second pass = file.txt + file.rom : replace symbols by addresses
   
   def start(self):
     while True:

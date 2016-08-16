@@ -1,14 +1,14 @@
 ADC B;^(ADC B)$;88
 ADD B;^(ADD B)$;80
 ANA B;^(ANA B)$;A0
-CALL XXXX;^(CALL 0X[0-9A-F]{4})$;FF
+CALL XXXX;^(CALL ((0X[0-9A-F]{4})|(\w+))$;FF
 CLC;^(CLC)$;9
 HLT;^(HLT)$;76
 IN M;^(IN M)$;D7
 INC A;^(INC A)$;3C
 JGT M;^(JGT M)$;e8
 JLT M;^(JLT M)$;e1
-JMP M;^(JMP 0X[0-9A-F]{4})$;C3
+JMP M;^(JMP ((0X[0-9A-F]{4})|\w+))$;C3
 JNZ M;^(JNZ M)$;f0
 JZ M;^(JZ M)$;CA
 MOV A,B;^(MOV A,B)$;78
