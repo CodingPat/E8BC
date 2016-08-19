@@ -5,27 +5,26 @@ import os
 
 class SymbolTable():
   def __init__(self):
-    self.symbols={}
-    self.next_free_address=0
+    self.table={}
+        
+  def addEntry(self,symbol,address):
+    self.table[symbol]=address
     
-  def addEntry(self,symbol):
-    address=str(hex(self.next_free_address)).upper()
-    address.replace('0X','').zfill(4)
-    address='0X'+address    
-    self.symbols['symbol']=address
-    self.next_free_address=self.next_free_address+1
   
   def contains(self,symbol):
-    if self.symbols['symbol']:
+    if symbol in self.table:
       return True
     else:
       return False
     
   def getAddress(self,symbol):
-    if self.contains(symbol):
-      return self.symbols['symbol']
+    if symbol in self.table:
+      return self.table[symbol]
     else:
       return None
+      
+    
+     
     
 
 class Mnemonics():
@@ -48,10 +47,10 @@ class Mnemonics():
 class Parser():
   """parse a file and return elements for each line"""
   
-  def __init__(self,mnemonics,symbols):
+  def __init__(self,mnemonics,symbol_table):
     self.parsed_line={}
     self.mnemonics=mnemonics
-    self.symbols=symbols
+    self.symbol_table=symbol_table
   
   
   def parse_for_blank(self,line):
@@ -63,28 +62,28 @@ class Parser():
     
   
   def parse_for_label(self,line):
+    line.strip()
     matchobj=re.match(r'^\w+:$',line)
     line.replace(":","")
     if matchobj:
-      if not self.symbols.gets(line):
-        self.symbols.add_entry(line)
-       
-      return {'type':"label"}
+      return {'type':"label",'label':line}
     
     
 
   def parse_for_opcode(self,line):
-    index=0
+    
+    index=0    
     opcode_hex=""
     for reg in self.mnemonics.regex:
       #print('regex :',reg)
+      
       matchobj=re.match(reg,line)
       if matchobj:
         dic_instruction=self.split_opcode(line)
         dic_instruction.update({'type':'opcode','regex':self.mnemonics.regex[index]})
         return dic_instruction
-        
       index=index+1
+        
     return None   
     
   
@@ -94,6 +93,7 @@ class Parser():
     line=line.strip()
     self.parsed_line={}
     
+    
     #delete comments
     line=line.split('#')
     line=line[0]
@@ -102,6 +102,7 @@ class Parser():
     result=self.parse_for_opcode(line)
     if result:
       self.parsed_line=result
+      
     else:
       result=self.parse_for_blank(line)
       if result:
@@ -110,10 +111,11 @@ class Parser():
         result=self.parse_for_label(line)
         if result:
           self.parsed_line=result
+          
         else:
           self.parsed_line={'type':'unknown','line':line}
       
-             
+           
       
   def split_opcode(self,line):
     """get opcode, source, destination"""
@@ -135,12 +137,24 @@ class Parser():
       elif nr_operands==2:
         operand1=other[0]
         operand2=other[1]
-        
-    return({'opcode':opcode,'operand1':operand1,'operand2':operand2})
     
+    return({'opcode':opcode,'operand1':operand1,'operand2':operand2})    
+
         
+  def parse_for_symbol():
+  #check for symbol
+    for operand in ['operand1','operand2']:
+    
+      if self.parsed_line[operand]:
+        if re.match(r'^[a-zA-Z]\w+$',self.parsed_line[operand]):
+          if not self.symbols.contains(self.parsed_line[operand]):
+            self.symbols.addEntry(self.parsed_line[operand])
+        
+                  
       
 class Encoder():
+  encoded_bytes=0 #class variable= total number of bytes encoded so far
+  
   def __init__(self,mnemonics):
     self.mnemonics=mnemonics    
     self.translated=[]
@@ -165,25 +179,46 @@ class Encoder():
     extra_bytes=[]
     result=""
     
-    if parse_dict['opcode'] in('CALL','IN','JGT','JLT','JMP','JNZ','JZ'):    
-      result=str(self.operand_to_hex(parse_dict['operand1']))
-      if result:
-        result=result.split('0X')[1]
-        extra_bytes.append(result[2:4])
-        extra_bytes.append(result[0:2])
+    if parse_dict['opcode'] in('CALL','JGT','JLT','JMP','JNZ','JZ'):
+      if re.match(r'^[a-zA-Z]\w+$',parse_dict['operand1']):
+      #label symbol
+        result_LO="?"+parse_dict['operand1']+"?"+"LO"
+        result_HI="?"+parse_dict['operand1']+"?"+"HI"
+        #write 2 values to keep the number of bytes written correct
+        extra_bytes.append(result_LO)
+        extra_bytes.append(result_HI)
+      else:      
+      #value
+        result=str(self.operand_to_hex(parse_dict['operand1']))
+        if result:
+          result=result.split('0X')[1]
+          extra_bytes.append(result[2:4])
+          extra_bytes.append(result[0:2])
     
-    if parse_dict['opcode'] in('OUT'): 
-      result=str(self.operand_to_hex(parse_dict['operand1']))
-      if result:
-        result=result.split('0X')[1]
+    if parse_dict['opcode'] in('IN','OUT'): 
+      if re.match(r'^[a-zA-Z]\w+$',parse_dict['operand1']):
+      #variable symbol (IN/OUT use 8bits addresses)
+        result="?"+parse_dict['operand1']+"?"
         extra_bytes.append(result)
+      else:
+      #value
+        result=str(self.operand_to_hex(parse_dict['operand1']))
+        if result:
+          result=result.split('0X')[1]
+          extra_bytes.append(result)
           
          
     if parse_dict['opcode'] in('MOVI'):    
-      result=str(self.operand_to_hex(parse_dict['operand2']))
-      if result:
-        result=result.split('0X')[1]
-        extra_bytes.append(result)
+      if re.match(r'^[a-zA-Z]\w+$',parse_dict['operand1']):
+      #variable symbol
+        result="?"+parse_dict['operand2']+"?"
+        extra_bytes.append(result) 
+      else:
+      #value       
+        result=str(self.operand_to_hex(parse_dict['operand2']))
+        if result:
+          result=result.split('0X')[1]
+          extra_bytes.append(result)
        
     if parse_dict['opcode']=='PUSH' and parse_dict['operand1'][0]=='R':    
       operand=parse_dict['operand1'].split('R')[1] 
@@ -229,40 +264,32 @@ class Encoder():
           self.translated=self.translated+result
         else:
           print('ERROR ENCODING MULTIBYTE INSTRUCTION')
-
+                
     else:
       print("ERROR NO HEX FOUND")
-        
+    
+    Encoder.encoded_bytes=Encoder.encoded_bytes+len(self.translated)
+      
+     
+       
      
 class Writer():
-  def __init__(self,file_rom,file_txt):
-    self.file_rom=file_rom
+  def __init__(self,file_txt):
     self.file_txt=file_txt  
-    self.bytes_written=0
-    self.write_header()
-  
-  def write_header(self):
-    self.file_rom.write("v2.0 raw\n")
     
-  def write_to_file(self,hex_array,line_code):
+        
+  def write_instruction(self,hex_array,line_code):
     
     #write to txt
-    rom_address=str(hex(self.bytes_written)).replace('0x',"").zfill(4)
+    rom_address=str(hex(Encoder.encoded_bytes-len(hex_array))).replace('0x',"").zfill(4)
     rom_address="0X"+rom_address    
-    line=str(rom_address).ljust(10)+" ".join(hex_array).ljust(15)+line_code.strip()
+    line=str(rom_address).ljust(10)+" ".join(hex_array).ljust(30)+line_code.strip()
     self.file_txt.write(line+'\n')
     
     
-    #write to rom    
-    nr_bytes_to_write=len(hex_array)
-    while(nr_bytes_to_write):    
-      nr_bytes_to_write=nr_bytes_to_write-1    
-      byte=hex_array.pop(0)
-      self.file_rom.write(byte+" ")
-      self.bytes_written=self.bytes_written+1
-      if self.bytes_written%8==0:
-        self.file_rom.write('\n')
-        
+  def write_label(self,result):
+    self.file_txt.write(result['label']+'\n')
+            
    
      
   
@@ -280,18 +307,27 @@ class Controller():
     file_txt=file_name+'.txt'
     file_txt=os.path.join(file_path,file_txt)    
     
-    print(file_rom,file_txt)   
+       
     self.file_rom=open(file_rom,'w')
     self.file_txt=open(file_txt,'w')    
     self.mnemonics=Mnemonics(mnemonics_file)
-    self.parser=Parser(self.mnemonics)
+    self.symbol_table=SymbolTable()
+    self.parser=Parser(self.mnemonics,self.symbol_table)
     self.encoder=Encoder(self.mnemonics)
-    self.writer=Writer(self.file_rom,self.file_txt) 
-    
-  #to do : 2 passes. 
-  #First pass=file.1st (txt) + create symbol table
-  #Second pass = file.txt + file.rom : replace symbols by addresses
+    self.writer=Writer(self.file_txt) 
   
+
+#Two passes to resolve symbols  
+#it's not possible to resolve all label symbols at first pass
+#you can get a JMP label when the label symbol has not yet been resolved
+#you can resolve all variable symbols at first pass : if they are not yet defined, you can request and reserve memory
+#but the code gets more complicated this way
+#i chose to resolve all symbols at second pass
+#the parsing at first pass helps the second pass, by prefixing symbols by ?label? or ?variable?
+#labels'addresses are also computed at first pass (if not, the second pass would need to parse everything again for getting the address)     
+
+   
+  #First pass= create symbol table and file.txt  
   def start(self):
     while True:
       line=self.file_in.readline()
@@ -300,17 +336,52 @@ class Controller():
         line=line.upper()
         self.parser.parse_line(line)
         result=self.parser.parsed_line
-        #print(result)
         if result['type']=="unknown":
           print("ERROR :",result)
+          break
         if result['type']=="opcode":
           self.encoder.encode(result)
-          
-          #print(" ".join(self.encoder.translated)+"\t\t"+self.parser.parsed_line['opcode'])
-          self.writer.write_to_file(self.encoder.translated,line)
+          self.writer.write_instruction(self.encoder.translated,line)
+        if result['type']=="label":
+          self.writer.write_label(result)
+          result=result['label'].replace(':','')
+          address='0x'+str(hex(Encoder.encoded_bytes)).replace('0x','').zfill(4)
+          self.symbol_table.addEntry(result,address)
                      
       else:
         break
+        
+    print('symbol table:',self.symbol_table.table)
+    
+            
+    #second pass = replace symbols by addresses in files file.txt 
+    #after that,create file.rom by copying "second column" of file.txt
+    #,using format of logisim (max 8 bytes per line)
+    
+        
+    
+    #address=next_free_address.upper()
+    #address.replace('0X','').zfill(4)
+    #address='0X'+address    
+    #self.symbols['symbol']=address
+    #next_free_address=self.next_free_address+1
+    
+    #write to rom 
+    
+    #def write_header(self):
+    #self.file_rom.write("v2.0 raw\n")
+     
+    #nr_bytes_to_write=len(hex_array)
+    #while(nr_bytes_to_write):    
+    #  nr_bytes_to_write=nr_bytes_to_write-1    
+    #  byte=hex_array.pop(0)
+    #  self.file_rom.write(byte+" ")
+    #  self.bytes_written=self.bytes_written+1
+    #  if self.bytes_written%8==0:
+    #    self.file_rom.write('\n')
+    
+    
+    
       
     self.file_in.close()
     self.file_rom.close()
