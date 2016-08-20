@@ -1,8 +1,12 @@
 #light leds OUT0 = value from 0 to 255
 
 	MOVI A,0
-label1:
+
+loop:
 	OUT 0x00
 	INC A
-	JMP label1
+	JMP loop
+	HLT
+	
+
 

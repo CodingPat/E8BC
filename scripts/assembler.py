@@ -2,6 +2,7 @@ import sys
 import re
 import csv
 import os
+import fileinput
 
 class SymbolTable():
   def __init__(self):
@@ -158,6 +159,7 @@ class Encoder():
   def __init__(self,mnemonics):
     self.mnemonics=mnemonics    
     self.translated=[]
+    self.nr_bytes=0 #nr bytes is different of len(self.translated) because of symbols
     
   def operand_to_hex(self,operand):
     """convert operand to hex"""
@@ -182,11 +184,10 @@ class Encoder():
     if parse_dict['opcode'] in('CALL','JGT','JLT','JMP','JNZ','JZ'):
       if re.match(r'^[a-zA-Z]\w+$',parse_dict['operand1']):
       #label symbol
-        result_LO="?"+parse_dict['operand1']+"?"+"LO"
-        result_HI="?"+parse_dict['operand1']+"?"+"HI"
         #write 2 values to keep the number of bytes written correct
-        extra_bytes.append(result_LO)
-        extra_bytes.append(result_HI)
+        result='?'+parse_dict['operand1']+'?'        
+        extra_bytes.append(result)
+        
       else:      
       #value
         result=str(self.operand_to_hex(parse_dict['operand1']))
@@ -194,10 +195,12 @@ class Encoder():
           result=result.split('0X')[1]
           extra_bytes.append(result[2:4])
           extra_bytes.append(result[0:2])
-    
+
+      self.nr_bytes=self.nr_bytes+2
+      
     if parse_dict['opcode'] in('IN','OUT'): 
       if re.match(r'^[a-zA-Z]\w+$',parse_dict['operand1']):
-      #variable symbol (IN/OUT use 8bits addresses)
+      #variable symbol (IN/OUT use 8bits address)
         result="?"+parse_dict['operand1']+"?"
         extra_bytes.append(result)
       else:
@@ -206,7 +209,8 @@ class Encoder():
         if result:
           result=result.split('0X')[1]
           extra_bytes.append(result)
-          
+      
+      self.nr_bytes=self.nr_bytes+1      
          
     if parse_dict['opcode'] in('MOVI'):    
       if re.match(r'^[a-zA-Z]\w+$',parse_dict['operand1']):
@@ -220,12 +224,15 @@ class Encoder():
           result=result.split('0X')[1]
           extra_bytes.append(result)
        
+      self.nr_bytes=self.nr_bytes+1
+       
     if parse_dict['opcode']=='PUSH' and parse_dict['operand1'][0]=='R':    
       operand=parse_dict['operand1'].split('R')[1] 
       result=str(self.operand_to_hex(operand))
       if result:
         result=result.split('0X')[1]
         extra_bytes.append(result)
+        self.nr_bytes=self.nr_bytes+1
       
     if parse_dict['opcode']=='PUSH' and parse_dict['operand1']=='M':    
       operand=parse_dict['operand2']
@@ -237,15 +244,18 @@ class Encoder():
         extra_bytes.append(result[0:2])
         #use temporary register reg0
         extra_bytes.insert(0,'00')
+        self.nr_bytes=self.nr_bytes+3
     
     return extra_bytes      
       
   def encode(self,parse_dict):
     self.translated=[]
+    self.nr_bytes=0
     index=self.mnemonics.regex.index(parse_dict['regex'])
     multibyte=False
     if index:
       self.translated.append(self.mnemonics.hex[index])
+      self.nr_bytes=self.nr_bytes+1
 
       #multibytes instructions
       if parse_dict['opcode'] in('CALL','IN','JGT','JLT','JMP','JNZ','JZ','MOVI'):
@@ -265,7 +275,7 @@ class Encoder():
     else:
       print("ERROR NO HEX FOUND")
     
-    Encoder.encoded_bytes=Encoder.encoded_bytes+len(self.translated)
+    Encoder.encoded_bytes=Encoder.encoded_bytes+self.nr_bytes
       
      
        
@@ -275,10 +285,10 @@ class Writer():
     self.file_txt=file_txt  
     
         
-  def write_instruction(self,hex_array,line_code):
+  def write_instruction(self,hex_array,nr_bytes,line_code):
     
     #write to txt
-    rom_address=str(hex(Encoder.encoded_bytes-len(hex_array))).replace('0x',"").zfill(4)
+    rom_address=str(hex(Encoder.encoded_bytes-nr_bytes)).replace('0x',"").zfill(4)
     rom_address="0X"+rom_address    
     line=str(rom_address).ljust(10)+" ".join(hex_array).ljust(30)+line_code.strip()
     self.file_txt.write(line+'\n')
@@ -288,47 +298,62 @@ class Writer():
     self.file_txt.write(result['label']+'\n')
             
    
-     
+class MemoryManager():
+  
+  def __init__(self,first_free_address="0x0000",last_free_address="0xFFFF"):
+    self.next_free_address=first_free_address
+    self.last_free_address=last_free_address
+  
+  def allocate_memory(self,nr_bytes):
+    #to do : check upper limit self.last_free_address
+    result=self.next_free_address
+    self.next_free_address=self.next_free_address+nr_bytes
+    return result
+    
+    
+  def set_next_free_address(self,address):
+    self.next_free_address=address
+    
+
   
 class Controller():
   """controls the working of the parser"""
   def __init__(self,file_in,mnemonics_file):
     self.file_in=open(file_in,'r')
-    file_name=os.path.basename(file_in)
-    file_path=file_in.replace(file_name,"")
-    
-    file_name=file_name.split('.asm')[0]
-        
-    file_rom=file_name+'.rom'
-    file_rom=os.path.join(file_path,file_rom)    
-    file_txt=file_name+'.txt'
-    file_txt=os.path.join(file_path,file_txt)    
-    
-       
-    self.file_rom=open(file_rom,'w')
-    self.file_txt=open(file_txt,'w')    
+    file_out=file_in.replace(".asm",".txt")    
+    self.file_out=open(file_out,'r+')
+      
     self.mnemonics=Mnemonics(mnemonics_file)
     self.symbol_table=SymbolTable()
     self.parser=Parser(self.mnemonics,self.symbol_table)
     self.encoder=Encoder(self.mnemonics)
-    self.writer=Writer(self.file_txt) 
+    self.writer=Writer(self.file_out)
+    
+    self.memory_manager=MemoryManager() 
   
 
-#Two passes to resolve symbols  
-#it's not possible to resolve all label symbols at first pass
-#you can get a JMP label when the label symbol has not yet been resolved
-#you can resolve all variable symbols at first pass : if they are not yet defined, you can request and reserve memory
-#but the code gets more complicated this way
-#i chose to resolve all symbols at second pass
-#the parsing at first pass helps the second pass, by prefixing symbols by ?label? or ?variable?
-#labels'addresses are also computed at first pass (if not, the second pass would need to parse everything again for getting the address)     
 
    
-  #First pass= create symbol table and file.txt  
   def start(self):
+  
+  #Two passes are needed to resolve symbols  
+  #it's not possible to resolve all label symbols at first pass
+  #you can read an instruction JMP <label> before the label symbol has been resolved
+  #At first pass :
+  # -the labels are added to the symbol table (to avoid a complete reparsing at second pass to get the address)     
+  # -symbols are prefixed and suffixed by ?, like this : ?symbol?, to help the second pass recognize symbols to solve 
+  
+
+    self.first_pass()
+    self.second_pass()
+    
+  def first_pass(self):
+    
+    print("\nStarting first pass")
+    print("=============================================")
     while True:
       line=self.file_in.readline()
-      
+    
       if line:
         line=line.upper()
         self.parser.parse_line(line)
@@ -338,33 +363,44 @@ class Controller():
           break
         if result['type']=="opcode":
           self.encoder.encode(result)
-          self.writer.write_instruction(self.encoder.translated,line)
+          self.writer.write_instruction(self.encoder.translated,self.encoder.nr_bytes,line)
         if result['type']=="label":
           self.writer.write_label(result)
           result=result['label'].replace(':','')
           address='0x'+str(hex(Encoder.encoded_bytes)).replace('0x','').zfill(4)
           self.symbol_table.addEntry(result,address)
-                     
+                   
       else:
         break
-        
-    print('symbol table:',self.symbol_table.table)
+          
+    print("Encoded bytes:",Encoder.encoded_bytes)
+    print('symbol table for labels:',self.symbol_table.table)
+  
     
             
-    #second pass = replace symbols by addresses in files file.txt 
-    #after that,create file.rom by copying "second column" of file.txt
-    #,using format of logisim (max 8 bytes per line)
-    
+  def second_pass(self):
+    print("\nStarting second pass to resolve all symbols")
+    print("=============================================")
+    #second pass = replace symbols by addresses in file file.txt 
         
+    self.file_out.seek(0)    
+    record_nr=-1
     
-    #address=next_free_address.upper()
-    #address.replace('0X','').zfill(4)
-    #address='0X'+address    
-    #self.symbols['symbol']=address
-    #next_free_address=self.next_free_address+1
+    line=self.file_out.readline().strip()    
+    while line:
+      record_nr=record_nr+1
+      result=re.search(r'\?\w+\?',line)
+      if result:
+        symbol=result.group()
+        print('line',record_nr,'symbol:',symbol)
+          
+      line=self.file_out.readline().strip()
+          
+      
+  
     
-    #write to rom 
     
+    #write to rom (logisim format 8 bytes per line)
     #def write_header(self):
     #self.file_rom.write("v2.0 raw\n")
      
@@ -381,8 +417,7 @@ class Controller():
     
       
     self.file_in.close()
-    self.file_rom.close()
-    self.file_txt.close()
+    self.file_out.close()
         
        
   
@@ -390,6 +425,7 @@ if __name__=='__main__':
   #to do : replace opcodes set by csv file with regex/hex  
     
   file_in=sys.argv[1]
+  print(file_in)
   mnemonics_file='mnemonics.csv'
   my_controller=Controller(file_in,mnemonics_file)
   my_controller.start()
