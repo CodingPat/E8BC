@@ -18,7 +18,7 @@ MOV B,A;^(MOV B,A)$;47
 MOV B,M;^(MOV B,M)$;28
 MOV H,A;^(MOV H,A)$;67
 MOV L,A;^(MOV L,A)$;6F
-MOV M,A;^(MOV M,A)$;10
+MOV M,A;^(MOV ((\w+)|(0x[0-9A-Z]{4})),A)$;10
 MOV M,B;^(MOV M,B)$;49
 MOVI A,BYTE;^(MOVI A,){1}((\d{1,3})|(0X[0-9A-F]{1,2}))$;3E
 MOVI B,BYTE;^(MOVI B,){1}((\d{1,3})|(0X[0-9A-F]{1,2}))$;6

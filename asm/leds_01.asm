@@ -1,9 +1,12 @@
 #light leds OUT0 = value from 0 to 255
 
+  	
 	MOVI A,0
-
+  
+  
 loop:
 	OUT 0x00
+  MOV VAR1,A   #only to test parsing variable
 	INC A
 	JMP loop
 	HLT
