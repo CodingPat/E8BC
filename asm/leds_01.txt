@@ -1,8 +1,5 @@
-0X0000    3E 00                         MOVI A,0
-LOOP:
-0X0002    D3 00                         OUT 0X00
-0X0004    10 ?VAR1?                     MOV VAR1,A   #ONLY TO TEST PARSING VARIABLE
-0X0006    3C                            INC A
-0X0007    C3 ?LOOP?                     JMP LOOP
-0X000a    76                            HLT
-0X0004    10 00 00                     MOV VAR1,A   #ONLY TO TEST PARSING VARIABLE
+3E 00
+D3 00
+3C
+C3 02 00
+76

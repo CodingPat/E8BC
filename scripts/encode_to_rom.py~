@@ -24,7 +24,6 @@ class Controller():
         self.file_out.write('\n')
   
   def start(self):
-    self.write_header()
     line=self.file_in.readline()
     while line:
       self.bytes_to_write.extend(line.split())    

@@ -311,7 +311,7 @@ class Writer():
     #write to txt
     rom_address=str(hex(Encoder.encoded_bytes-nr_bytes)).replace('0x',"").zfill(4)
     rom_address="0X"+rom_address    
-    line=str(rom_address).ljust(10)+" ".join(hex_array).ljust(30)+line_code.strip()
+    line=str(rom_address).ljust(10)+" ".join(hex_array).ljust(30)+';'+line_code.strip()
     self.file_txt.write(line+'\n')
     
     
@@ -341,19 +341,24 @@ class Controller():
   """controls the working of the parser"""
   def __init__(self,file_in,mnemonics_file):
     self.file_in=open(file_in,'r')
-    file_out=file_in.replace(".asm",".txt")    
-    #create blank file_out so it can be after opened in r+ mode
+    file_name=file_in.replace(".asm","")
+    file_out_1st=file_name+"_1st.txt"
+    file_out=file_name+".txt"
+    
+    #file_out_1st must exist to be opened in r+ mode
+    file_tmp=open(file_out_1st,'w')
+    file_tmp.close()
+    
+        
+    self.file_out_1st=open(file_out_1st,'r+')
     self.file_out=open(file_out,'w')
-    self.file_out.write('blank file')
-    self.file_out.close()      
-    self.file_out=open(file_out,'r+')
-    self.file_out.seek(0)#dont keep first line of blank file
-      
+          
+          
     self.mnemonics=Mnemonics(mnemonics_file)
     self.symbol_table=SymbolTable()
     self.parser=Parser(self.mnemonics,self.symbol_table)
     self.encoder=Encoder(self.mnemonics)
-    self.writer=Writer(self.file_out)
+    self.writer=Writer(self.file_out_1st)
     
     self.memory_manager=MemoryManager() 
     self.error=False
@@ -379,6 +384,12 @@ class Controller():
     print('self.error:',self.error)
     if not self.error:
       self.second_pass()
+  
+  def end(self):    
+    self.file_in.close()
+    self.file_out_1st.close()
+    self.file_out.close()
+ 
         
   def first_pass(self):
     
@@ -417,6 +428,7 @@ class Controller():
     if len(string)<2:
       string=string.zfill(2)
       hex_list.append(string[0:2])
+      hex_list.append('00')
     else:
       string=string.zfill(4)
       hex_list.append(string[2:4])
@@ -428,47 +440,51 @@ class Controller():
     print("=============================================")
     #second pass = replace symbols by addresses in file file.txt 
     
-    self.file_out.seek(0)    
-    record_nr=-1
-    
-    line=self.file_out.readline().strip()
-        
-    while line:
-      record_nr=record_nr+1
-      
-      
-      result=re.search(r'\?\w+\?',line)
+    self.file_out_1st.seek(0)
+    while True:
+      line=self.file_out_1st.readline()    
+
+      if not line:
+        break
+      line=line.strip()
+      #ignore label lines. Line must begin with rom address   
+      result=re.match(r'^0X[0-9a-fA-F]{4}',line)
       if result:
-        symbol=result.group()
-        symbol=symbol.replace('?','')
-        #check if symbol table contains symbol, if not create one and get address from memory manager. 
-        #(all labels already got address at first pass)
-        #(labels=rom addresses - variables=ram addresses)
-        if self.symbol_table.contains(symbol):
-          address=self.symbol_table.getAddress(symbol)
-                  
+        line=line[10:].split(';')[0].strip()
+        symbol=re.search('\?\w+\?',line)        
+        if symbol:
+          print(line)
+          line=self.encode_line_with_symbol(line,symbol)
+          self.file_out.write(line+'\n')
         else:
-          address=self.memory_manager.allocate_memory()
-          
-        address=self.hex_to_little_endian(address)
-        print('address',symbol,address)
-        
-        to_replace='?'+symbol+'?'
-        replacement=address[0]+" "+address[1]
-        line=line.replace(to_replace,replacement)
-        
-        self.file_out.seek(record_nr)
-        self.file_out.write(line)              
-            
-      
+          self.file_out.write(line+'\n')
       
           
-      line=self.file_out.readline().strip()
-          
+  def encode_line_with_symbol(self,line,symbol):
+    symbol=symbol.group()
+    symbol=symbol.replace('?','')
+   
+    #check if symbol table contains symbol, if not create one and get address from memory manager. 
+    #(all labels already got address at first pass)
+    #(labels=rom addresses - variables=ram addresses)
+    if self.symbol_table.contains(symbol):
+      address=self.symbol_table.getAddress(symbol)
+              
+    else:
+      address=self.memory_manager.allocate_memory()
+      
+    address=self.hex_to_little_endian(address)
+    
+    print('address :',address)
+    
+    to_replace='?'+symbol+'?'
+    replacement=address[0]+" "+address[1]
+    line=line.replace(to_replace,replacement)
+    return line
+             
+        
          
       
-    self.file_in.close()
-    self.file_out.close()
         
        
   
@@ -480,6 +496,7 @@ if __name__=='__main__':
   mnemonics_file='mnemonics.csv'
   my_controller=Controller(file_in,mnemonics_file)
   my_controller.start()
+  my_controller.end()
   
   
   

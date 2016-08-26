@@ -1,0 +1,6 @@
+0X0000    3E 00                         ;MOVI A,0
+LOOP:
+0X0002    D3 00                         ;OUT 0X00
+0X0004    3C                            ;INC A
+0X0005    C3 ?LOOP?                     ;JMP LOOP
+0X0008    76                            ;HLT
