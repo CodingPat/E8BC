@@ -228,14 +228,7 @@ class Encoder():
        
       self.nr_bytes=self.nr_bytes+1
        
-    if parse_dict['opcode']=='PUSH' and parse_dict['operand1'][0]=='R':    
-      operand=parse_dict['operand1'].split('R')[1] 
-      result=str(self.operand_to_hex(operand))
-      if result:
-        result=result.split('0X')[1]
-        extra_bytes.append(result)
-        self.nr_bytes=self.nr_bytes+1
-      
+        
     if parse_dict['opcode']=='PUSH' and parse_dict['operand1']=='M':    
       operand=parse_dict['operand2']
           
@@ -246,7 +239,7 @@ class Encoder():
         extra_bytes.append(result[0:2])
         #use temporary register reg0
         extra_bytes.insert(0,'00')
-        self.nr_bytes=self.nr_bytes+3
+        self.nr_bytes=self.nr_bytes+2
         
     if parse_dict['regex']=='^(MOV ((\w+)|(0x[0-9A-Z]{4})),A)$':
       if re.match(r'^[a-zA-Z]\w+$',parse_dict['operand1']):
@@ -260,8 +253,21 @@ class Encoder():
           result=result.split('0X')[1]
           extra_bytes.append(result)
        
-      self.nr_bytes=self.nr_bytes+1
+      self.nr_bytes=self.nr_bytes+2
       
+    if parse_dict['regex']=='^(MOV A,((\w+)|(0x[0-9A-Z]{4})))$':
+      if re.match(r'^[a-zA-Z]\w+$',parse_dict['operand1']):
+      #variable symbol
+        result="?"+parse_dict['operand1']+"?"
+        extra_bytes.append(result) 
+      else:
+      #value       
+        result=str(self.operand_to_hex(parse_dict['operand2']))
+        if result:
+          result=result.split('0X')[1]
+          extra_bytes.append(result)
+       
+      self.nr_bytes=self.nr_bytes+2
 
     
     return extra_bytes      
@@ -360,7 +366,7 @@ class Controller():
     self.encoder=Encoder(self.mnemonics)
     self.writer=Writer(self.file_out_1st)
     
-    self.memory_manager=MemoryManager() 
+    self.memory_manager=MemoryManager(first_free_address="0x0100") # 0x0000 - 0x00FF = reserved for microprocessor (virtual regs) and OS
     self.error=False
 
 

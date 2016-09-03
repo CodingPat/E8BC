@@ -4,7 +4,7 @@ ANA B;^(ANA B)$;A0
 CALL <XXXX>;^(CALL ((0X[0-9A-F]{4})|(\w+)))$;FF
 CLC;^(CLC)$;9
 HLT;^(HLT)$;76
-IN M;^(IN M)$;D7
+IN <XX>;^(IN )((\d+)|(0X[0-9A-F]{1,2}))$;D7
 INC A;^(INC A)$;3C
 JGT M;^(JGT M)$;e8
 JLT M;^(JLT M)$;e1
@@ -13,7 +13,6 @@ JNZ M;^(JNZ M)$;f0
 JZ M;^(JZ M)$;CA
 MOV A,B;^(MOV A,B)$;78
 MOV A,M;^(MOV A,M)$;22
-MOV A,REG;^(MOV A,REG)$;16
 MOV B,A;^(MOV B,A)$;47
 MOV B,M;^(MOV B,M)$;28
 MOV H,A;^(MOV H,A)$;67
@@ -24,7 +23,6 @@ MOVI A,BYTE;^(MOVI A,){1}((\d{1,3})|(0X[0-9A-F]{1,2}))$;3E
 MOVI B,BYTE;^(MOVI B,){1}((\d{1,3})|(0X[0-9A-F]{1,2}))$;6
 MOVI SPH,BYTE;^(MOVI SPH,){1}((\d{1,3})|(0X[0-9A-F]{1,2}))$;1C
 MOVI SPL,BYTE;^(MOVI SPL,){1}((\d{1,3})|(0X[0-9A-F]{1,2}))$;1F
-MOVI REG,BYTE;^(MOVI R){1}[0-9]{1},{1}((\d{1,3})|(0X[0-9A-F]{1,2}))$;0B
 ORA B;^(ORA B)$;B0
 OUT <XX>;^(OUT )((\d+)|(0X[0-9A-F]{1,2}))$;D3
 POP A;^(ORA B)$;FF
@@ -32,7 +30,6 @@ POP B;^(ORA B)$;FF
 POP F;^(ORA B)$;FF
 POP H;^(ORA B)$;FF
 POP L;^(ORA B)$;FF
-POP REG;^(POP REG)$;FF
 POP SPH;^(POP SPH)$;FF
 POP SPL;^(POP SPL)$;FF
 PUSH A;^(PUSH A)$;57
@@ -42,8 +39,10 @@ PUSH H;^(PUSH H)$;5D
 PUSH L;^(PUSH L)$;60
 PUSH SPH;^(PUSH SPH)$;63
 PUSH SPL;^(PUSH SPL)$;69
-PUSH RX;^(PUSH R[0-9]{1})$;71
 PUSH M,XXXX;^(PUSH M,0X[A-F0-9]{4})$;A2
 RET;^(RET)$;FF
 SBC B;^(SBC B)$;98
 SUB B;^(SUB B)$;90
+MUL B;^(MUL B)$;41
+DIV B;^(DIV B)$;43
+MOV M,A;^(MOV M,A)$;22

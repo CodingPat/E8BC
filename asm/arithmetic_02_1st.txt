@@ -1,0 +1,24 @@
+0X0000    3E 00                         ;MOVI A,0
+LOOP:
+0X0002    D7 01                         ;IN 01
+0X0004    47                            ;MOV B,A
+0X0005    D7 00                         ;IN 00
+0X0007    80                            ;ADD B
+0X0008    D3 00                         ;OUT 00
+0X000a    D7 01                         ;IN 01
+0X000c    47                            ;MOV B,A
+0X000d    D7 00                         ;IN 00
+0X000f    90                            ;SUB B
+0X0010    D3 01                         ;OUT 01
+0X0012    D7 01                         ;IN 01
+0X0014    47                            ;MOV B,A
+0X0015    D7 00                         ;IN 00
+0X0017    41                            ;MUL B
+0X0018    D3 02                         ;OUT 02
+0X001a    D7 01                         ;IN 01
+0X001c    47                            ;MOV B,A
+0X001d    D7 00                         ;IN 00
+0X001f    43                            ;DIV B
+0X0020    D3 03                         ;OUT 03
+0X0022    C3 ?LOOP?                     ;JMP LOOP
+0X0025    76                            ;HLT
