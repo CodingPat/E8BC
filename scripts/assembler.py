@@ -32,6 +32,7 @@ class Mnemonics():
   def __init__(self,mnemonics_file):
     self.regex=[]
     self.hex=[]
+    self.multibytes=[]
     self.read_file(mnemonics_file)
     
   def read_file(self,mnemonics_file):
@@ -40,6 +41,7 @@ class Mnemonics():
       for row in csv_reader:
         self.regex.append(row[1])
         self.hex.append(row[2])
+        self.multibytes.append(row[3])
 
     
     
@@ -241,7 +243,23 @@ class Encoder():
         extra_bytes.insert(0,'00')
         self.nr_bytes=self.nr_bytes+2
         
-    if parse_dict['regex']=='^(MOV ((\w+)|(0x[0-9A-Z]{4})),A)$':
+    if parse_dict['opcode']=='MOV'and (parse_dict['operand1']=="A" or parse_dict['operand1']=="B"):
+      if re.match(r'^[a-zA-Z]\w+$',parse_dict['operand2']):
+      #variable symbol
+        result="?"+parse_dict['operand2']+"?"
+        extra_bytes.append(result) 
+      else:
+      #value       
+        result=str(self.operand_to_hex(parse_dict['operand2']))
+        if result:
+          result=result.split('0X')[1]
+          extra_bytes.append(result[2:4])
+          extra_bytes.append(result[0:2])
+          
+       
+      self.nr_bytes=self.nr_bytes+2
+
+    if parse_dict['opcode']=='MOV'and (parse_dict['operand2']=="A" or parse_dict['operand2']=="B"):
       if re.match(r'^[a-zA-Z]\w+$',parse_dict['operand1']):
       #variable symbol
         result="?"+parse_dict['operand1']+"?"
@@ -251,24 +269,11 @@ class Encoder():
         result=str(self.operand_to_hex(parse_dict['operand1']))
         if result:
           result=result.split('0X')[1]
-          extra_bytes.append(result)
+          extra_bytes.append(result[2:4])
+          extra_bytes.append(result[0:2])
+          
        
       self.nr_bytes=self.nr_bytes+2
-      
-    if parse_dict['regex']=='^(MOV A,((\w+)|(0x[0-9A-Z]{4})))$':
-      if re.match(r'^[a-zA-Z]\w+$',parse_dict['operand1']):
-      #variable symbol
-        result="?"+parse_dict['operand1']+"?"
-        extra_bytes.append(result) 
-      else:
-      #value       
-        result=str(self.operand_to_hex(parse_dict['operand2']))
-        if result:
-          result=result.split('0X')[1]
-          extra_bytes.append(result)
-       
-      self.nr_bytes=self.nr_bytes+2
-
     
     return extra_bytes      
       
@@ -276,28 +281,18 @@ class Encoder():
     self.translated=[]
     self.nr_bytes=0
     index=self.mnemonics.regex.index(parse_dict['regex'])
-    multibyte=False
+    multibytes=""
     if index:
       self.translated.append(self.mnemonics.hex[index])
       self.nr_bytes=self.nr_bytes+1
 
-      #multibytes instructions
-      if parse_dict['opcode'] in('CALL','IN','JGT','JLT','JMP','JNZ','JZ','MOVI'):
-        multibyte=True        
-      elif parse_dict['opcode']=="PUSH" and (parse_dict['operand1'][0]=='R'):
-        multibyte=True
-      elif parse_dict['opcode']=="OUT":
-        multibyte=True
-      elif parse_dict['regex']=="^(MOV ((\w+)|(0x[0-9A-Z]{4})),A)$":
-        multibyte=True
-
-      
-      if multibyte :
+      multibytes=int(self.mnemonics.multibytes[index])     
+      if multibytes :
         result=self.extra_bytes(parse_dict)
         if result:
           self.translated=self.translated+result
         else:
-          print('ERROR ENCODING MULTIBYTE INSTRUCTION')
+          print('ERROR ENCODING MULTIBYTES INSTRUCTION')
                 
     else:
       print("ERROR NO HEX FOUND")

@@ -1,8 +1,50 @@
 0X0000    3E 00                         ;MOVI A,0
 LOOP:
-0X0002    D7 01                         ;IN 01
-0X0004    10 0000                       ;MOV 0X0000,A
-0X0007    D7 00                         ;IN 00
-0X0009    10 0001                       ;MOV 0X0001,A
+0X0002    D7 00                         ;IN 00
+0X0004    10 00 00                      ;MOV 0X0000,A
+0X0007    D7 01                         ;IN 01
+0X0009    10 01 00                      ;MOV 0X0001,A
 0X000c    D7 02                         ;IN 02
-0X000e    10 0002                       ;MOV 0X0002,A
+0X000e    10 02 00                      ;MOV 0X0002,A
+0X0011    22 02 00                      ;MOV A,0X0002
+0X0014    06 01                         ;MOVI B,1
+0X0016    90                            ;SUB B
+0X0017    CA ?ADD?                      ;JZ ADD
+0X001a    22 02 00                      ;MOV A,0X0002
+0X001d    06 02                         ;MOVI B,2
+0X001f    90                            ;SUB B
+0X0020    CA ?SUB?                      ;JZ SUB
+0X0023    22 02 00                      ;MOV A,0X0002
+0X0026    06 04                         ;MOVI B,4
+0X0028    90                            ;SUB B
+0X0029    CA ?MUL?                      ;JZ MUL
+0X002c    22 02 00                      ;MOV A,0X0002
+0X002f    06 08                         ;MOVI B,8
+0X0031    90                            ;SUB B
+0X0032    CA ?DIV?                      ;JZ DIV
+0X0035    3E 00                         ;MOVI A,0X00
+0X0037    C3 ?DISPLAY?                  ;JMP DISPLAY
+ADD:
+0X003a    22 00 00                      ;MOV A,0X0000
+0X003d    28 01 00                      ;MOV B,0X0001
+0X0040    80                            ;ADD B
+0X0041    C3 ?DISPLAY?                  ;JMP DISPLAY
+SUB:
+0X0044    22 00 00                      ;MOV A,0X0000
+0X0047    28 01 00                      ;MOV B,0X0001
+0X004a    90                            ;SUB B
+0X004b    C3 ?DISPLAY?                  ;JMP DISPLAY
+MUL:
+0X004e    22 00 00                      ;MOV A,0X0000
+0X0051    28 01 00                      ;MOV B,0X0001
+0X0054    41                            ;MUL B
+0X0055    C3 ?DISPLAY?                  ;JMP DISPLAY
+DIV:
+0X0058    22 00 00                      ;MOV A,0X0000
+0X005b    28 01 00                      ;MOV B,0X0001
+0X005e    43                            ;DIV B
+0X005f    C3 ?DISPLAY?                  ;JMP DISPLAY
+DISPLAY:
+0X0062    D3 00                         ;OUT 00
+0X0064    C3 ?LOOP?                     ;JMP LOOP
+0X0067    76                            ;HLT

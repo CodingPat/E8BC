@@ -8,9 +8,9 @@
 
 LOOP:
   #store operands
-  IN 01
-  MOV 0x0000,A
   IN 00
+  MOV 0x0000,A
+  IN 01
   MOV 0x0001,A
   
   #store operator
@@ -19,30 +19,30 @@ LOOP:
   
   #test operator=+
   MOV A,0x0002
-  MOV B,1
+  MOVI B,1
   SUB B
   JZ ADD
   
   #test operator=-
   MOV A,0x0002  
-  MOV B,2
+  MOVI B,2
   SUB B
   JZ SUB
 
   #test operator=*
   MOV A,0x0002  
-  MOV B,4
+  MOVI B,4
   SUB B
   JZ MUL
 
   #test operator=/
   MOV A,0x0002
-  MOV B,8
+  MOVI B,8
   SUB B
   JZ DIV
   
   #no operation reset
-  MOVI A,0x0000
+  MOVI A,0x00
   JMP DISPLAY  
   
   
