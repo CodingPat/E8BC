@@ -13,7 +13,7 @@ JMP M;^(JMP ((0X[0-9A-F]{4})|(\w+)))$;C3;1
 JNZ M;^(JNZ ((0X[0-9A-F]{4})|(\w+)))$;f0;1
 JZ M;^(JZ ((0X[0-9A-F]{4})|(\w+)))$;CA;1
 MOV A,B;^(MOV A,B)$;78;0
-MOV A,<XXXX>;^(MOV A,0X[0-9A-F]{4})$;22;1
+MOV <XXXX>,A;^(MOV 0X[A-F0-9]{4},A)$;22;1
 MOV B,A;^(MOV B,A)$;47;0
 MOV B,M;^(MOV B,0X[0-9A-F]{4})$;28;1
 MOV H,A;^(MOV H,A)$;67;0
@@ -21,7 +21,7 @@ MOV L,A;^(MOV L,A)$;6F;0
 MOV M,A;^(MOV ((\w+)|(0x[0-9A-Z]{4})),A)$;10;1
 MOV M,B;^(MOV M,B)$;49;1
 MOVI A,BYTE;^(MOVI A,){1}((\d{1,3})|(0X[0-9A-F]{1,2}))$;3E;1
-MOVI B,BYTE;^(MOVI B,){1}((\d{1,3})|(0X[0-9A-F]{1,2}))$;06;1
+MOVI B,BYTE;^(MOVI B,){1}((\d{1,3})|(0X[0-9A-F]{1,2}))$;6;1
 MOVI SPH,BYTE;^(MOVI SPH,){1}((\d{1,3})|(0X[0-9A-F]{1,2}))$;1C;1
 MOVI SPL,BYTE;^(MOVI SPL,){1}((\d{1,3})|(0X[0-9A-F]{1,2}))$;1F;1
 ORA B;^(ORA B)$;B0;0
@@ -46,4 +46,3 @@ SBC B;^(SBC B)$;98;0
 SUB B;^(SUB B)$;90;0
 MUL B;^(MUL B)$;41;0
 DIV B;^(DIV B)$;43;0
-MOV <XXXX>,A;^(MOV 0X[A-F0-9]{4},A)$;22;1
